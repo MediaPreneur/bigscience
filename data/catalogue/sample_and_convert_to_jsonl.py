@@ -621,13 +621,13 @@ def main():
         raise NotImplementedError
 
     # remove all columns except text
-    logger.info(f"Removing all columns except `text`")
+    logger.info("Removing all columns except `text`")
     columns_to_remove = set(ds.column_names)
     columns_to_remove.remove("text")
     ds = ds.remove_columns(list(columns_to_remove))
 
     # sample dataset according to ratio
-    logger.info(f"Sampling dataset according to given ratio")
+    logger.info("Sampling dataset according to given ratio")
     if args.dataset_path in CATALOGUE_DATASETS:
         ds = sample_dataset(ds, CATALOGUE_DATASETS[args.dataset_path])
     elif args.dataset_path in OSCAR_DATASETS:

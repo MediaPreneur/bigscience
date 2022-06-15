@@ -28,7 +28,7 @@ import tensorflow as tf
 from tensorflow.core.util.event_pb2 import Event
 
 def rename_events(input_file, old_tags, new_tag):
-    new_file = input_file + ".new"
+    new_file = f"{input_file}.new"
     # Make a record writer
     with tf.io.TFRecordWriter(new_file) as writer:
         # Iterate event records

@@ -11,11 +11,7 @@
 import sys
 from datasets import load_dataset
 
-if "-10k" in sys.argv:
-    dataset_name = "stas/openwebtext-10k"
-else:
-    dataset_name = "openwebtext"
-
+dataset_name = "stas/openwebtext-10k" if "-10k" in sys.argv else "openwebtext"
 name = dataset_name.split('/')[-1]
 ds = load_dataset(dataset_name, split='train')
 ds.to_json(f"{name}.jsonl", orient="records", lines=True)

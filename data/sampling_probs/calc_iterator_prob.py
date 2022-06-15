@@ -14,10 +14,8 @@ def calc_multinomial_sampling_prob_with_penalty(dataset_size, alpha=.5):
     Calculate multinomial probability distribution based on https://arxiv.org/pdf/1901.07291.pdf (section 3.1)
     :dataset_size: A dictionary contains the size (value) of each of the language (key).
     """
-    tot_size = 0
     probs = OrderedDict()
-    for lang, size in dataset_size.items():
-        tot_size += size
+    tot_size = sum(size for lang, size in dataset_size.items())
     for lang, size in dataset_size.items():
         probs[lang] = size / tot_size
 
@@ -44,14 +42,14 @@ def get_size_stats(args):
             if not (filename.startswith(args.name_prefix) and filename.endswith(args.extension_name)):
                 continue
             full_file_path = os.path.join(dirpath, filename)
-            lang_size = subprocess.check_output("du -s {}".format(full_file_path), shell=True)
+            lang_size = subprocess.check_output(f"du -s {full_file_path}", shell=True)
             lang_size = int(lang_size.decode("utf-8").split("\t")[0])
-            if args.size_format == 'KB':
+            if args.size_format == 'GB':
+                _conv = 1024 * 1024
+            elif args.size_format == 'KB':
                 _conv = 1
             elif args.size_format == 'MB':
                 _conv = 1024
-            elif args.size_format == 'GB':
-                _conv = 1024 * 1024
             elif args.size_format == 'TB':
                 _conv = 1024 * 1024 * 1024
             lang_size_ = round(lang_size / float(_conv), 2)
@@ -63,15 +61,15 @@ def print_stat(args, lang_size_dict, value_name='size'):
     """
     Print size statistics.
     """
-    lang_list = sorted([(k, v) for k, v in lang_size_dict.items()], key=lambda tup: tup[1])
+    lang_list = sorted(list(lang_size_dict.items()), key=lambda tup: tup[1])
     total_size = 0
     print("\nLanguage : ({})".format(value_name))
     print("-" * 20)
     for lang, size in lang_list:
-        print("{} :   {}".format(lang, size))
+        print(f"{lang} :   {size}")
         total_size += size
     print("-" * 20)
-    print("Total size : {}".format(total_size))
+    print(f"Total size : {total_size}")
 
 
 def removesuffix(string, suffix):
@@ -111,20 +109,23 @@ def main():
     for lang, prob in sampling_probability.items():
         sampling_probability[lang] = (prob, size_dict[lang])
         lang_contrib_size = round(size_dict[lang] * prob, 2)
-        print("{} :   {}  ({}  ->  {})".format(lang, prob, size_dict[lang], lang_contrib_size))
+        print(f"{lang} :   {prob}  ({size_dict[lang]}  ->  {lang_contrib_size})")
         total_contrib += lang_contrib_size
     print("-" * 50)
-    print("Total size : {}".format(total_contrib))
+    print(f"Total size : {total_contrib}")
 
-    open(os.path.join(args.output_dir, 'iterator_selection_prob.{}.json'.format(args.alpha)), "w").write(
-        json.dumps(sampling_probability, indent=4)
-    )
+    open(
+        os.path.join(
+            args.output_dir, f'iterator_selection_prob.{args.alpha}.json'
+        ),
+        "w",
+    ).write(json.dumps(sampling_probability, indent=4))
+
 
     if args.old_format:
-        with open(os.path.join(args.output_dir, "dataset_probabilities.{}.txt".format(args.alpha)), "w") as fout:
+        with open(os.path.join(args.output_dir, f"dataset_probabilities.{args.alpha}.txt"), "w") as fout:
             fout.write(
                 " ".join([f"{prob[0]} {removesuffix(path, '.bin')}" for path, prob in sampling_probability.items()]))
-        pass
     else:
         output_sampling_probs_new_format(sampling_probability, args.output_dir, args.alpha)
 

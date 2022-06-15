@@ -35,7 +35,6 @@ def main():
 
     with open(output_path, "w") as fout:
         fout.write(" ".join([f"{prob} {path}" for path, prob in probabilities.items()]))
-    pass
 
 if __name__ == "__main__":
     main()

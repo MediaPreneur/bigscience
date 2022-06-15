@@ -16,8 +16,11 @@ def finalize_dataset_string(dataset_string):
 
 def get_longest_prefix_and_suffix(file1, file2):
     # we're assuming all filepaths have the same format
-    prefix = max([i for i in range(len(file1)) if file2.startswith(file1[:i])])
-    suffix = min([i for i in range(len(file1) - 1, -1, -1) if file2.endswith(file1[i:])])
+    prefix = max(i for i in range(len(file1)) if file2.startswith(file1[:i]))
+    suffix = min(
+        i for i in range(len(file1) - 1, -1, -1) if file2.endswith(file1[i:])
+    )
+
     return prefix, suffix
 
 
@@ -30,7 +33,7 @@ def output_sampling_probs_new_format(sampling_probs, input_dir, alpha):
     valid_split_string = f"{SPLIT[1]}:{SPLIT[2]}"
     test_split_string = f"{SPLIT[2]}:{SPLIT[3]}"
 
-    train_string = f"train:"
+    train_string = "train:"
     for file, weight in file_weights:
         train_string += f" {weight} {train_split_string} {file},"
     train_string = finalize_dataset_string(train_string)
