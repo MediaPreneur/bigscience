@@ -7,8 +7,7 @@ from multiprocessing import cpu_count
 
 def get_size_per_example(texts: List[str]) -> Dict:
     size_values = [len(text.encode()) for text in texts]
-    examples = {"bytes_len": size_values}
-    return examples
+    return {"bytes_len": size_values}
 
 
 def full_size_estimation(
@@ -28,8 +27,7 @@ def full_size_estimation(
         input_columns=[content_key],
         remove_columns=ds.column_names,
     )
-    len_bytes = sum(ds_with_size["bytes_len"])
-    return len_bytes
+    return sum(ds_with_size["bytes_len"])
 
 
 def get_args():

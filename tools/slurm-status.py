@@ -63,7 +63,7 @@ Launching training: https://github.com/bigscience-workshop/bigscience/tree/maste
 def check_running_on_jean_zay():
     fqdn = socket.getfqdn()
     # sometimes it gives fqdn, other times it doesn't, so try to use both patterns
-    if not ("idris.fr" in fqdn or "idrsrv" in fqdn):
+    if "idris.fr" not in fqdn and "idrsrv" not in fqdn:
         raise ValueError("This script relies on JZ's specific environment and won't work elsewhere. "
         f"You're attempting to run it on '{fqdn}'.")
 
@@ -94,8 +94,7 @@ def get_slurm_group_status():
     # use shlex to split correctly and not on whitespace
     cmd = f'squeue --user={usernames} -o "%.16i %.9P %.40j %.8T %.10M %.6D %.20S %R"'
     data = run_cmd(shlex.split(cmd))
-    lines = [line.strip() for line in data.split("\n")]
-    return lines
+    return [line.strip() for line in data.split("\n")]
 
 
 def get_remaining_time(time_str):

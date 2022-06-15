@@ -43,11 +43,7 @@ def main():
     datasets_per_language = defaultdict(lambda: [])
     for ds_ratio in ds_ratios:
         candidate_lang = r.match(ds_ratio["dataset_path"]).group(1)
-        if candidate_lang == "hi":
-            ds_ratio["lang"] = "indic-hi"
-        else:
-            ds_ratio["lang"] = candidate_lang
-
+        ds_ratio["lang"] = "indic-hi" if candidate_lang == "hi" else candidate_lang
         merged_language = ds_ratio["lang"].split("-")[0]
         # Merge zh languages
         if candidate_lang in ["zhs", "zht"]:
@@ -58,16 +54,15 @@ def main():
     # save ratio result into a file (in json format, you can use `load_ratios_meg_ds_format` for get the meg_ds format)
     language_ds_ratios = [
         {
-            "ratio": sum([elt["ratio"] for elt in datasets]),
+            "ratio": sum(elt["ratio"] for elt in datasets),
             "dataset_path": args.meg_ds_dataset_prefix.format(lang=lang),
-            # Additional field to store in case we want to know what's in there.
             "original_datasets": [
-                dataset["dataset_path"]
-                for dataset in datasets
-            ]
+                dataset["dataset_path"] for dataset in datasets
+            ],
         }
         for lang, datasets in datasets_per_language.items()
     ]
+
 
     with open(args.output_ratio_file, "w") as fi:
         json.dump(language_ds_ratios, fi, indent=2)

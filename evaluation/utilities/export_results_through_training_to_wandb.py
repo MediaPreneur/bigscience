@@ -74,11 +74,19 @@ def main():
                             acc_average.append(values[i])
                             normalised_acc_average.append(normalise(values[i], task))
             if args.naive_average:
-                wandb.log({f"naive_average": np.mean(all_values), "tokens": tokens[i]})
+                wandb.log({"naive_average": np.mean(all_values), "tokens": tokens[i]})
             if args.acc_average:
-                wandb.log({f"acc_average": np.mean(acc_average), "tokens": tokens[i]})
+                wandb.log({"acc_average": np.mean(acc_average), "tokens": tokens[i]})
             if args.normalised_acc_average:
-                wandb.log({f"normalised_acc_average": np.mean(normalised_acc_average), "tokens": tokens[i]})
+                wandb.log(
+                    {
+                        "normalised_acc_average": np.mean(
+                            normalised_acc_average
+                        ),
+                        "tokens": tokens[i],
+                    }
+                )
+
 
         run.finish()
 

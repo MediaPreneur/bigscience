@@ -227,10 +227,7 @@ class GPT2OnnxConfig(OnnxConfigWithPast):
             for i in range(self._config.n_layer * 2):
                 common_inputs[f"past_key_values.{i}"] = {0: "batch", 2: "sequence"}
 
-            common_inputs["attention_mask"] = {0: "batch", 1: "sequence"}
-        else:
-            common_inputs["attention_mask"] = {0: "batch", 1: "sequence"}
-
+        common_inputs["attention_mask"] = {0: "batch", 1: "sequence"}
         return common_inputs
 
     @property
@@ -261,17 +258,16 @@ class GPT2OnnxConfig(OnnxConfigWithPast):
         if self.use_past:
             if not is_torch_available():
                 raise ValueError("Cannot generate dummy past_keys inputs without PyTorch installed.")
-            else:
-                import torch
+            import torch
 
-                batch = common_inputs["input_ids"].shape[0]
-                ordered_inputs["past_key_values"] = [
-                    (
-                        torch.zeros((batch, self._config.n_head, 1, self._config.hidden_size // self._config.n_head)),
-                        torch.zeros((batch, self._config.n_head, 1, self._config.hidden_size // self._config.n_head)),
-                    )
-                    for _ in range(self._config.n_layer)
-                ]
+            batch = common_inputs["input_ids"].shape[0]
+            ordered_inputs["past_key_values"] = [
+                (
+                    torch.zeros((batch, self._config.n_head, 1, self._config.hidden_size // self._config.n_head)),
+                    torch.zeros((batch, self._config.n_head, 1, self._config.hidden_size // self._config.n_head)),
+                )
+                for _ in range(self._config.n_layer)
+            ]
 
         ordered_inputs["attention_mask"] = common_inputs["attention_mask"]
         return ordered_inputs
@@ -327,11 +323,11 @@ def load_tf_weights_in_gpt2(model, config, gpt2_checkpoint_path):
                 scope_names = re.split(r"(\d+)", m_name)
             else:
                 scope_names = [m_name]
-            if scope_names[0] == "w" or scope_names[0] == "g":
+            if scope_names[0] in ["w", "g"]:
                 pointer = getattr(pointer, "weight")
             elif scope_names[0] == "b":
                 pointer = getattr(pointer, "bias")
-            elif scope_names[0] == "wpe" or scope_names[0] == "wte":
+            elif scope_names[0] in ["wpe", "wte"]:
                 pointer = getattr(pointer, scope_names[0])
                 pointer = getattr(pointer, "weight")
             else:
@@ -405,7 +401,7 @@ class GPT2Attention(nn.Module):
         self.pruned_heads = self.pruned_heads.union(heads)
 
     def _attn(self, query, key, value, attention_mask=None, head_mask=None):
-        
+
         # [b, np, sq, sk]
         output_size = (query.size(1),
                        query.size(2),
@@ -421,7 +417,7 @@ class GPT2Attention(nn.Module):
                 device=torch.cuda.current_device())
         else:
             matmul_result = alibi[:output_size[0]*output_size[1], :, :output_size[3]]
-            
+
         # [sq, b, np, hn] -> [sq, b * np, hn]
         query = query.view(output_size[2],
                                        output_size[0] * output_size[1], -1)
@@ -434,7 +430,7 @@ class GPT2Attention(nn.Module):
             query_layer.transpose(0, 1),   # [b * np, sq, hn]
             key_layer.transpose(0, 1).transpose(-1, -2),  # [b * np, hn, sk]
             beta=0.0 if alibi is None else 1.0, alpha=(1.0/self.norm_factor))
-        
+
         #attn_weights = torch.matmul(query, key.transpose(-1, -2))
 
         # change view to [b, np, sq, sk]
@@ -492,7 +488,7 @@ class GPT2Attention(nn.Module):
         alibi=None,
         use_cache=False,
         output_attentions=False,
-        
+
     ):
         if encoder_hidden_states is not None:
             if not hasattr(self, "q_attn"):
@@ -516,11 +512,7 @@ class GPT2Attention(nn.Module):
             key = torch.cat((past_key, key), dim=-2)
             value = torch.cat((past_value, value), dim=-2)
 
-        if use_cache is True:
-            present = (key, value)
-        else:
-            present = None
-
+        present = (key, value) if use_cache is True else None
         attn_output, attn_weights = self._attn(query, key, value, attention_mask, head_mask)
 
         attn_output = self._merge_heads(attn_output, self.num_heads, self.head_dim)
@@ -883,7 +875,7 @@ class GPT2Model(GPT2PreTrainedModel):
             def get_slopes_power_of_2(n):
                 start = (2 ** (-2 ** -(math.log2(n) - 3)))
                 ratio = start
-                return [start * ratio ** i for i in range(n)]
+                return [ratio * ratio ** i for i in range(n)]
 
             if math.log2(n).is_integer():
                 return get_slopes_power_of_2(n)
@@ -905,14 +897,19 @@ class GPT2Model(GPT2PreTrainedModel):
         )
         assert_device_map(self.device_map, len(self.h))
         self.model_parallel = True
-        self.first_device = "cpu" if "cpu" in self.device_map.keys() else "cuda:" + str(min(self.device_map.keys()))
-        self.last_device = "cuda:" + str(max(self.device_map.keys()))
+        self.first_device = (
+            "cpu"
+            if "cpu" in self.device_map.keys()
+            else f"cuda:{str(min(self.device_map.keys()))}"
+        )
+
+        self.last_device = f"cuda:{str(max(self.device_map.keys()))}"
         self.wte = self.wte.to(self.first_device)
         self.wpe = self.wpe.to(self.first_device)
         # Load onto devices
         for k, v in self.device_map.items():
             for block in v:
-                cuda_device = "cuda:" + str(k)
+                cuda_device = f"cuda:{str(k)}"
                 self.h[block] = self.h[block].to(cuda_device)
         # ln_f to last
         self.ln_f = self.ln_f.to(self.last_device)
@@ -1613,16 +1610,15 @@ class GPT2ForSequenceClassification(GPT2PreTrainedModel):
         ), "Cannot handle batch sizes > 1 if no padding token is defined."
         if self.config.pad_token_id is None:
             sequence_lengths = -1
-        else:
-            if input_ids is not None:
-                sequence_lengths = torch.ne(input_ids, self.config.pad_token_id).sum(-1) - 1
-            else:
-                sequence_lengths = -1
-                logger.warning(
-                    f"{self.__class__.__name__} will not detect padding tokens in `inputs_embeds`. Results may be "
-                    f"unexpected if using padding tokens in conjunction with `inputs_embeds.`"
-                )
+        elif input_ids is None:
+            sequence_lengths = -1
+            logger.warning(
+                f"{self.__class__.__name__} will not detect padding tokens in `inputs_embeds`. Results may be "
+                f"unexpected if using padding tokens in conjunction with `inputs_embeds.`"
+            )
 
+        else:
+            sequence_lengths = torch.ne(input_ids, self.config.pad_token_id).sum(-1) - 1
         pooled_logits = logits[range(batch_size), sequence_lengths]
 
         loss = None

@@ -37,7 +37,7 @@ Subject: {subject}
 
 def send_email_alert(msg):
 
-    subject = f"[ALERT] JZ filesystem is getting close to being full"
+    subject = "[ALERT] JZ filesystem is getting close to being full"
     body = f"""
 ***ALERT: One or more partitions at JZ are getting close to being full! Alert someone at Eng WG***
 
@@ -54,7 +54,7 @@ If unsure what to do, please post in the #bigscience-engineering slack channel.
 def check_running_on_jean_zay():
     fqdn = socket.getfqdn()
     # sometimes it gives fqdn, other times it doesn't, so try to use both patterns
-    if not ("idris.fr" in fqdn or "idrsrv" in fqdn):
+    if "idris.fr" not in fqdn and "idrsrv" not in fqdn:
         raise ValueError("This script relies on JZ's specific environment and won't work elsewhere. "
         f"You're attempting to run it on '{fqdn}'.")
 
@@ -114,8 +114,7 @@ def main():
     def analyse_partition_idrquota(partition_name, partition_flag, alert_bytes_threshold, alert_inodes_threshold):
         cmd = f"idrquota {partition_flag} -p {SLURM_GROUP_NAME}"
         response = run_cmd(cmd.split())
-        match = re.findall(' \(([\d\.]+)%\)', response)
-        if match:
+        if match := re.findall(' \(([\d\.]+)%\)', response):
             bytes_percent, inodes_percent = [float(x) for x in match]
         else:
             raise ValueError(f"{cmd} failed")
@@ -130,7 +129,7 @@ def main():
         if inodes_percent/100 > alert_inodes_threshold:
             msg.append(f"{partition_name} is at {inodes_percent:.2f}% inodes usage")
 
-        if len(msg) > 0:
+        if msg:
             alerts.extend(msg)
             alerts.append(response)
             alerts.append("")
